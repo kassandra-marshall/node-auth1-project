@@ -1,6 +1,24 @@
 // Require `checkUsernameFree`, `checkUsernameExists` and `checkPasswordLength`
 // middleware functions from `auth-middleware.js`. You will need them here!
+const express = require('express');
+const bcrypt = require('bcryptjs');
+const router = express.Router();
+const User = require('../users/users-model');
+const { checkUsernameFree, checkUsernameExists, checkPasswordLength } = require('./auth-middleware');
 
+router.post('/register', checkUsernameFree, checkPasswordLength, async (req, res, next) => {
+  try {
+    const { username, password } = req.body
+    const hash = bcrypt.hashSync(password, 8)
+    const newUser = { username, password: hash}
+    const result = await User.add(newUser)
+    res.status(200).json({ message: `nice to have you, ${result.username}`})
+  } catch (error) {
+    next(error)
+  }
+  
+  
+})
 
 /**
   1 [POST] /api/auth/register { "username": "sue", "password": "1234" }
@@ -25,6 +43,19 @@
   }
  */
 
+router.post('/login', checkUsernameExists, async (req, res, next) => {
+  try {
+    const { username, password } = req.body
+    const [user] = await User.findBy({ username })
+    if (user && bcrypt.compareSync(password, user.password)) {
+      res.send(200).json({ message: `Welcome ${user.username}` })
+    } else {
+      next({ status: 401, message: 'Invalid credentials' })
+    }
+  } catch (error) {
+    next(error)
+  }
+})
 
 /**
   2 [POST] /api/auth/login { "username": "sue", "password": "1234" }
@@ -41,7 +72,18 @@
     "message": "Invalid credentials"
   }
  */
-
+router.get('/logout', (req, res, next) => { //eslint-disable-line
+  if(req.session.user) {
+    req.session.destroy(err => {
+      if (err) {
+        res.status(200).json({ message: 'no session' })
+      } else {
+        res.set('Set-Cookie', 'chocolatechip=; SameSite=Strict; Path=/; Expires=Thu, 01 Jan 1970 00:00:00')
+        res.status(200).json({ message: 'logged out' })
+      }
+    })
+  }
+})
 
 /**
   3 [GET] /api/auth/logout
@@ -61,3 +103,4 @@
 
  
 // Don't forget to add the router to the `exports` object so it can be required in other modules
+module.exports = router;

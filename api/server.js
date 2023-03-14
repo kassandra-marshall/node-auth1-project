@@ -21,28 +21,28 @@ const usersRouter = require('./users/users-router')
 
 const server = express();
 
-server.use(helmet());
-server.use(express.json());
-server.use(cors());
 server.use(session({
   name: 'chocolatechip',
   secret: 'keep it secret, keep it safe!',
-  cookie: {
-    maxAge: 1000 * 60 * 60,
-    secure: false,
-    httpOnly: false
-  },
-  rolling: true,
-  resave: false,
   saveUninitialized: false,
+  resave: false,
   store: new Store({
     knex: require('../data/db-config'),
-    tablename: 'sessions',
-    sidfieldname: 'sid',
     createtable: true,
-    clearInterval: 1000 * 60 * 60,
-  })
+    clearInterval: 1000 * 60 * 10,
+    tablename: 'sessions',
+    sidfieldname: 'sid'
+  }),
+  cookie: {
+    maxAge: 1000 * 60 * 10,
+    secure: false,
+    httpOnly: true,
+  },
 }))
+
+server.use(helmet());
+server.use(express.json());
+server.use(cors());
 
 server.use('/api/auth', authRouter)
 server.use('/api/users', usersRouter)

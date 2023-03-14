@@ -1,4 +1,4 @@
-const db = require('../../data/db-config')
+const Users = require('../users/users-model')
 /*
   If the user does not have a session saved in the server
 
@@ -8,11 +8,12 @@ const db = require('../../data/db-config')
   }
 */
 async function restricted(req, res, next) {
-  if(req.session.user) {
-    next()
-  } else {
-    next({ status: 401, message: 'You shall not pass!' })
-  }
+  next()
+  // if(req.session.user) {
+  //   next()
+  // } else {
+  //   next({ status: 401, message: 'You shall not pass!' })
+  // }
 }
 
 /*
@@ -24,12 +25,17 @@ async function restricted(req, res, next) {
   }
 */
 async function checkUsernameFree(req, res, next) {
-  const user = await db('users').where(req.body.username).first()
-  if (user) {
-    next({ status: 422, message: 'Username taken' })
-  } else {
-    next()
+  try {
+    const users = await Users.findBy({ username: req.body.username })
+    if (!users.length) {
+      next()
+    } else {
+      next({ status: 422, message: 'Username taken' })
+    }
+  } catch (error) {
+    next(error)
   }
+  
 }
 
 /*
@@ -41,12 +47,17 @@ async function checkUsernameFree(req, res, next) {
   }
 */
 async function checkUsernameExists(req, res, next) {
-  const username = await db('users').where(req.body.username)
-  if (!username) {
-    next({ status: 401, message: 'Invalid credentials' })
-  } else {
-    next()
+  try {
+    const username = await Users.findBy({ username: req.body.username })
+    if (username.length) {
+      next()
+    } else {
+      next({ status: 401, message: 'Invalid credentials' })
+    }
+  } catch (error) {
+    next(error)
   }
+  
 }
 
 /*
@@ -57,9 +68,9 @@ async function checkUsernameExists(req, res, next) {
     "message": "Password must be longer than 3 chars"
   }
 */
-async function checkPasswordLength(req, res, next) {
-  const password = await req.body.password
-  if (!password || password.length < 4) {
+function checkPasswordLength(req, res, next) {
+  const password = req.body.password
+  if (!password || password.length < 3) {
     next({ status: 422, message: 'Password must be longer than 3 chars' })
   } else {
     next()

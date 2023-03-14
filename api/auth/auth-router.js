@@ -10,18 +10,15 @@ const {
   checkPasswordLength 
 } = require('./auth-middleware');
 
-router.post('/register', checkUsernameFree, checkPasswordLength, async (req, res, next) => {
-  res.json('register')
-  // try {
-  //   const { username, password } = req.body
-  //   const hash = bcrypt.hashSync(password, 8)
-  //   const newUser = { username, password: hash}
-  //   const result = await User.add(newUser)
-  //   res.status(200).json({ message: `nice to have you, ${result.username}`})
-  // } catch (error) {
-  //   next(error)
-  // }
-  
+router.post('/register', checkUsernameFree, checkPasswordLength, (req, res, next) => {
+  const { username, password } = req.body
+  const hash = bcrypt.hashSync(password, 8)
+
+  User.add({ username, password: hash })
+    .then(saved => {
+      res.status(201).json(saved)
+    })
+    .catch(next) 
   
 })
 
@@ -49,18 +46,13 @@ router.post('/register', checkUsernameFree, checkPasswordLength, async (req, res
  */
 
 router.post('/login', checkUsernameExists, async (req, res, next) => {
-  res.json('login')
-  // try {
-  //   const { username, password } = req.body
-  //   const [user] = await User.findBy({ username })
-  //   if (user && bcrypt.compareSync(password, user.password)) {
-  //     res.send(200).json({ message: `Welcome ${user.username}` })
-  //   } else {
-  //     next({ status: 401, message: 'Invalid credentials' })
-  //   }
-  // } catch (error) {
-  //   next(error)
-  // }
+  const { password } = req.body
+  if(bcrypt.compareSync(password, req.user.password)) {
+    req.session.user = req.user
+    res.status(200).json({ message: `Welcome ${req.user.username}`})
+  } else {
+    next({ status: 401, message: 'Invalid credentials' })
+  }
 })
 
 /**
